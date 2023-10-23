@@ -10,16 +10,16 @@ STICKERS = ['CAACAgIAAxkBAAEKkJFlMuxRNXvaKC6CV5AVAhnjvBVtcgACIQgAAvaWIEoXKn6oDdX
             'CAACAgIAAxkBAAEKkJhlMu0H9j-UrucqzE8GQDL5F0zQOAACwRQAAkUrWEicagVRWPL21zAE']
 
 
-# @router.message(F.text)
-# async def message_with_text(message: Message):
-#     await message.answer_sticker(random.choice(STICKERS))
-#
-#
-# @router.message(F.sticker)
-# async def message_with_sticker(message: Message):
-#     await message.answer_sticker(random.choice(STICKERS))
-#
-#
-# @router.message(F.animation)
-# async def message_with_gif(message: Message):
-#     await message.answer_sticker(random.choice(STICKERS))
+@router.message(F.text)
+async def message_with_text(message: Message):
+    await message.answer_sticker(random.choice(STICKERS))
+
+
+@router.message(F.sticker)
+async def message_with_sticker(message: Message):
+    await message.answer_sticker(random.choice(STICKERS))
+
+
+@router.message(F.animation)
+async def message_with_gif(message: Message):
+    await message.answer_sticker(random.choice(STICKERS))

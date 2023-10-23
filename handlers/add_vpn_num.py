@@ -9,27 +9,32 @@ from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardRemove
 
 from keyboards.for_validate import get_yes_no_kb
+from db_funcs.db import check_existing_user, write_user_to_db
 
 
 form_router = Router()
 
-# Подключение к базе данных
-conn = sqlite3.connect('users.db')
-cursor = conn.cursor()
-
-# Создание таблицы пользователей (id, номер телефона и количество поинтов)
-cursor.execute('''CREATE TABLE IF NOT EXISTS users
-                  (user_id INTEGER PRIMARY KEY, vpn_number INT, points INT)''')
-conn.commit()
-
 
 @form_router.message(Command("start"))
 async def command_start(message: Message, state: FSMContext) -> None:
-    await state.set_state(StartForm.name)
-    await message.answer(
-        "Hi there! What's your name?",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    user_id = message.from_user.id
+
+    existing_user = check_existing_user(user_id)
+
+    if existing_user:
+        user_name = existing_user[1]
+        vpn_number = existing_user[2]  # Получаем номер из базы данных
+        points = existing_user[3]  # Получаем количество поинтов из базы данных
+        await message.answer(f'Привет, {user_name}! Ты уже в нашей базе данных.')
+        await message.answer(f'Твой номер: {vpn_number}. Твои поинты: {points}.')
+        await message.answer('Если хочешь поменять свой номер, напиши команду "еще не придумал"!')
+
+    else:
+        await state.set_state(StartForm.name)
+        await message.answer(
+            "Hi there! What's your name?",
+            reply_markup=ReplyKeyboardRemove(),
+        )
 
 
 @form_router.message(Command("cancel"))
@@ -50,10 +55,9 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
     )
 
 
-@form_router.message(StartForm.name)
+@form_router.message(StartForm.name, F.text.isalpha())
 async def process_name(message: Message, state: FSMContext) -> None:
     await state.update_data(name=message.text)
-    await state.set_state(StartForm.vpn_num)
     await state.set_state(StartForm.vpn_num)
     await message.answer(
         f"Nice to meet you, {message.text}!\nTell me your number",
@@ -71,11 +75,19 @@ async def process_assure_vpn_number(message: Message, state: FSMContext) -> None
 
 @form_router.message(StartForm.vpn_num, F.text.casefold() == "yes")
 async def process_vpn_num_yes(message: Message, state: FSMContext) -> None:
+
     data = await state.get_data()
+    user_id = message.from_user.id
+    user_name = data.get('name')
+    vpn_number = data.get('vpn_num')
+    points = 0
+
     await message.reply(
         f"Cool {data['name']}! Your number is {data['vpn_num']}. Writing it into DB!",
         reply_markup=ReplyKeyboardRemove(),
     )
+    write_user_to_db(user_id, user_name, vpn_number, points)
+    await state.clear()
 
 
 @form_router.message(StartForm.vpn_num, F.text.casefold() == "no")
@@ -90,3 +102,7 @@ async def process_vpn_num_no(message: Message, state: FSMContext) -> None:
 async def process_unknown_vpn_num(message: Message) -> None:
     await message.reply("I don't understand you :(")
 
+
+@form_router.message(StartForm.name)
+async def process_unknown_name(message: Message) -> None:
+    await message.reply("Don't try to fool me!")
