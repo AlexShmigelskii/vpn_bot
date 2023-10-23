@@ -6,15 +6,16 @@ import sys
 
 import secret
 from db_funcs.db import create_database
-from handlers import add_vpn_num, different_types
+from handlers import add_vpn_num, get_points, different_types
+
+bot = Bot(token=secret.TOKEN)
+dp = Dispatcher()
 
 
 # Запуск бота
 async def main():
-    bot = Bot(token=secret.TOKEN)
-    dp = Dispatcher()
 
-    dp.include_routers(add_vpn_num.form_router, different_types.router)
+    dp.include_routers(add_vpn_num.form_router, get_points.form_router, different_types.router)
 
     # Запускаем бота и пропускаем все накопленные входящие
     # Да, этот метод можно вызвать даже если у вас поллинг
