@@ -26,7 +26,7 @@ async def command_start(message: Message, state: FSMContext) -> None:
         points = existing_user[3]  # Получаем количество поинтов из базы данных
         await message.answer(f'Привет, {user_name}! Ты уже в нашей базе данных.')
         await message.answer(f'Твой номер: {vpn_number}. Дней до конца подписки: {points}')
-        await message.answer('Если хочешь поменять свой номер, напиши команду "еще не придумал"!')
+        await message.answer('Если хочешь поменять свой номер, напиши команду "/change_num"!')
         await message.answer('Если хочешь продлить подписку, напиши команду "/get_points"!')
 
     else:
@@ -79,12 +79,12 @@ async def process_vpn_num_yes(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     user_id = message.from_user.id
     user_name = data.get('name')
-    vpn_number = data.get('vpn_num')
+    vpn_number = data.get('new_vpn_num')
     points = 0
     valid = False
 
     await message.reply(
-        f"Cool {data['name']}! Your number is {data['vpn_num']}. Writing it into DB!",
+        f"Cool {data['name']}! Your number is {data['new_vpn_num']}. Writing it into DB!",
         reply_markup=ReplyKeyboardRemove(),
     )
     write_user_to_db(user_id, user_name, vpn_number, points, valid)

@@ -58,3 +58,17 @@ def update_user_points(user_id, duration):
 
     # Закрыть соединение
     conn.close()
+
+
+def update_user_vpn_num(user_id, vpn_number):
+    vpn_number = int(vpn_number)
+    # Подключение к базе данных
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Обновление поля vpn_number в базе данных
+    cursor.execute("UPDATE users SET vpn_number=? WHERE user_id=?", (vpn_number, user_id))
+    conn.commit()
+
+    # Закрыть соединение
+    conn.close()
