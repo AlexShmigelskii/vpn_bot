@@ -54,21 +54,21 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
     )
 
 
-@form_router.message(Form.validate, F.text.casefold() == "yes")
+@form_router.message(Form.validate, F.text.casefold() == "да")
 async def process_validate_yes(message: Message, state: FSMContext) -> None:
 
     await message.reply(
-        f"Cool! Tell me your number",
+        f"Супер! Назови свой новый номер",
         reply_markup=ReplyKeyboardRemove(),
     )
     await state.set_state(Form.new_vpn_num)
 
 
-@form_router.message(Form.validate, F.text.casefold() == "no")
+@form_router.message(Form.validate, F.text.casefold() == "нет")
 async def process_validate_no(message: Message, state: FSMContext) -> None:
 
     await message.reply(
-        f"See you!",
+        f"До встречи!",
         reply_markup=ReplyKeyboardRemove(),
     )
     await state.clear()
@@ -76,17 +76,17 @@ async def process_validate_no(message: Message, state: FSMContext) -> None:
 
 @form_router.message(Form.validate)
 async def process_unknown_validate(message: Message) -> None:
-    await message.reply("I don't understand you :(")
+    await message.reply("Я не понимаю тебя :(")
 
 
 @form_router.message(Form.new_vpn_num, F.text.isdigit())
 async def process_new_vpn_num(message: Message, state: FSMContext) -> None:
     user_id = message.from_user.id
     vpn_num = message.text
-    update_user_vpn_num(user_id, vpn_num)
+    db_reply = update_user_vpn_num(user_id, vpn_num)
 
     await message.reply(
-        f"Ok! DB has been updated",
+        f"{db_reply}",
         reply_markup=ReplyKeyboardRemove(),
     )
     await state.clear()
@@ -94,5 +94,4 @@ async def process_new_vpn_num(message: Message, state: FSMContext) -> None:
 
 @form_router.message(Form.new_vpn_num)
 async def process_unknown_new_vpn_num(message: Message) -> None:
-    await message.reply("I don't understand you :(")
-
+    await message.reply("Я не понимаю тебя :(")

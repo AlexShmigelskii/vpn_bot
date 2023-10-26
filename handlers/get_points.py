@@ -9,7 +9,7 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from Forms.get_points_form import Form
 from keyboards.keyboards import get_yes_no_kb, get_duration_kb
 
-from db_funcs.db import check_existing_user, update_user_points
+from db_funcs.db import check_existing_user, update_user_points, check_valid
 
 form_router = Router()
 
@@ -21,16 +21,25 @@ async def command_get_points(message: Message, state: FSMContext) -> None:
     existing_user = check_existing_user(user_id)
 
     if existing_user:
-        user_name = existing_user[1]
-        vpn_number = existing_user[2]  # Получаем номер из базы данных
-        points = existing_user[3]  # Получаем количество поинтов из базы данных
 
-        await message.answer(f'{user_name} ({vpn_number}), у тебя еще {points} дней подписки!')
-        await message.answer(
-            'Хочешь продлить подписку?',
-            reply_markup=get_yes_no_kb()
-        )
-        await state.set_state(Form.want_to_purchase)
+        if check_valid(user_id):
+            user_name = existing_user[1]
+            vpn_number = existing_user[2]  # Получаем номер из базы данных
+            points = existing_user[3]  # Получаем количество поинтов из базы данных
+
+            await message.answer(f'{user_name} ({vpn_number}), у тебя еще {points} дней подписки!')
+            await message.answer(
+                'Хочешь продлить подписку?',
+                reply_markup=get_yes_no_kb()
+            )
+            await state.set_state(Form.want_to_purchase)
+
+        else:
+            await message.answer(
+                f"Прости,я еще не успел проверить твое старое пополнение!",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            await state.clear()
 
     else:
         await message.answer(
@@ -57,7 +66,7 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
     )
 
 
-@form_router.message(Form.want_to_purchase, F.text.casefold() == "yes")
+@form_router.message(Form.want_to_purchase, F.text.casefold() == "да")
 async def process_want_to_purchase_yes(message: Message, state: FSMContext) -> None:
 
     await message.reply(
@@ -67,7 +76,7 @@ async def process_want_to_purchase_yes(message: Message, state: FSMContext) -> N
     await state.set_state(Form.select_duration)
 
 
-@form_router.message(Form.want_to_purchase, F.text.casefold() == "no")
+@form_router.message(Form.want_to_purchase, F.text.casefold() == "нет")
 async def process_want_to_purchase_no(message: Message, state: FSMContext) -> None:
 
     await message.reply(
@@ -80,7 +89,7 @@ async def process_want_to_purchase_no(message: Message, state: FSMContext) -> No
 
 @form_router.message(Form.want_to_purchase)
 async def process_unknown_want_to_purchase(message: Message) -> None:
-    await message.reply("I don't understand you :(")
+    await message.reply("Я не понимаю тебя :(")
 
 
 @form_router.message(Form.select_duration, F.text.in_({'30', '60', '90'}))
@@ -95,7 +104,7 @@ async def process_duration(message: Message, state: FSMContext) -> None:
     )
 
 
-@form_router.message(Form.select_duration, F.text.casefold() == "yes")
+@form_router.message(Form.select_duration, F.text.casefold() == "да")
 async def process_duration_yes(message: Message, state: FSMContext) -> None:
 
     await message.reply(
@@ -105,7 +114,7 @@ async def process_duration_yes(message: Message, state: FSMContext) -> None:
     await state.set_state(Form.send_photo)
 
 
-@form_router.message(Form.select_duration, F.text.casefold() == "no")
+@form_router.message(Form.select_duration, F.text.casefold() == "нет")
 async def process_duration_no(message: Message) -> None:
 
     await message.reply(
@@ -116,7 +125,7 @@ async def process_duration_no(message: Message) -> None:
 
 @form_router.message(Form.select_duration)
 async def process_unknown_duration(message: Message) -> None:
-    await message.reply("I don't understand you :(")
+    await message.reply("Я не понимаю тебя :(")
 
 
 @form_router.message(Form.send_photo, F.photo)
@@ -130,13 +139,21 @@ async def process_send_photo(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     duration = data.get("duration")
 
-    await bot.send_photo(chat_id=admin_id, photo=photo, caption=f'Перевод от {user[1]} на {duration}')
-    update_user_points(user_id, duration)
+    await bot.send_photo(chat_id=admin_id, photo=photo, caption=f'Новый перевод:\n'
+                                                                f'от {user[1]} ({user[2]})\n'
+                                                                f'на {duration} дней')
+    db_response = update_user_points(user_id, duration)
 
-    await message.reply(
-        f"Фотографию получил. Подписка продлена на {duration} дней!",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    if db_response:
+        await message.reply(
+            f"Фотографию получил. Подписка продлена на {duration} дней!",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+    else:
+        await message.reply(
+            f"Тебе нужно дождаться, пока я проверю предыдущую фотографию",
+            reply_markup=ReplyKeyboardRemove(),
+        )
     await state.clear()
 
 

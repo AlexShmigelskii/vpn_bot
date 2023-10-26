@@ -30,6 +30,18 @@ def check_existing_user(user_id):
     return existing_user
 
 
+def check_valid(user_id):
+    # Подключение к базе данных
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Получение значения поля valid
+    cursor.execute("SELECT valid FROM users WHERE user_id=?", (user_id,))
+    valid_status = cursor.fetchone()[0]
+
+    return valid_status
+
+
 def write_user_to_db(user_id, user_name, vpn_number, points, valid=False):
     # Используем менеджер контекста для открытия соединения с базой данных
     with sqlite3.connect('users.db') as conn:
@@ -45,19 +57,33 @@ def update_user_points(user_id, duration):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
 
-    # Получение текущего значения points пользователя
-    cursor.execute("SELECT points FROM users WHERE user_id=?", (user_id,))
-    current_points = cursor.fetchone()[0]
+    # Получение значения поля valid
+    cursor.execute("SELECT valid FROM users WHERE user_id=?", (user_id,))
+    valid_status = cursor.fetchone()[0]
 
-    # Вычисление нового значения points (прибавляем duration)
-    new_points = current_points + int(duration)
+    if valid_status:
+        # Получение текущего значения points пользователя
+        cursor.execute("SELECT points FROM users WHERE user_id=?", (user_id,))
+        current_points = cursor.fetchone()[0]
 
-    # Обновление поля points в базе данных
-    cursor.execute("UPDATE users SET points=? WHERE user_id=?", (new_points, user_id))
-    conn.commit()
+        # Вычисление нового значения points (прибавляем duration)
+        new_points = current_points + int(duration)
 
-    # Закрыть соединение
-    conn.close()
+        # Обновление полей points и valid в базе данных
+        cursor.execute("UPDATE users SET points=?, valid=0 WHERE user_id=?", (new_points, user_id))
+        conn.commit()
+
+        # Закрыть соединение
+        conn.close()
+
+        # Возвращаем успешный сигнал
+        return True
+    else:
+        # Закрыть соединение
+        conn.close()
+
+        # Возвращаем сигнал об ошибке, если поле valid равно False
+        return False
 
 
 def update_user_vpn_num(user_id, vpn_number):
@@ -66,9 +92,21 @@ def update_user_vpn_num(user_id, vpn_number):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
 
+    # Проверка наличия номера vpn в базе данных
+    cursor.execute("SELECT * FROM users WHERE vpn_number=?", (vpn_number,))
+    existing_user = cursor.fetchone()
+
+    if existing_user:
+        # Номер vpn уже существует в базе данных, возвращаем ошибку
+        conn.close()
+        return "ERROR: Номер vpn уже занят. Пожалуйста, введите свой номер."
+
     # Обновление поля vpn_number в базе данных
     cursor.execute("UPDATE users SET vpn_number=? WHERE user_id=?", (vpn_number, user_id))
     conn.commit()
 
     # Закрыть соединение
     conn.close()
+
+    # Возвращаем успешный сигнал
+    return "Номер vpn успешно обновлен."

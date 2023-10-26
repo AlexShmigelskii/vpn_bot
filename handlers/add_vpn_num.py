@@ -32,7 +32,7 @@ async def command_start(message: Message, state: FSMContext) -> None:
     else:
         await state.set_state(Form.name)
         await message.answer(
-            "Hi there! What's your name?",
+            "Привет! Как я могу к тебе обращаться?",
             reply_markup=ReplyKeyboardRemove(),
         )
 
@@ -60,7 +60,7 @@ async def process_name(message: Message, state: FSMContext) -> None:
     await state.update_data(name=message.text)
     await state.set_state(Form.vpn_num)
     await message.answer(
-        f"Nice to meet you, {message.text}!\nTell me your number",
+        f"Рад тебя видеть, {message.text}!\nНазови свой номер",
     )
 
 
@@ -68,42 +68,42 @@ async def process_name(message: Message, state: FSMContext) -> None:
 async def process_assure_vpn_number(message: Message, state: FSMContext) -> None:
     await state.update_data(vpn_num=message.text)
     await message.reply(
-        f"Is {message.text} - your number?",
+        f"{message.text} - твой номер?",
         reply_markup=get_yes_no_kb(),
     )
 
 
-@form_router.message(Form.vpn_num, F.text.casefold() == "yes")
+@form_router.message(Form.vpn_num, F.text.casefold() == "да")
 async def process_vpn_num_yes(message: Message, state: FSMContext) -> None:
 
     data = await state.get_data()
     user_id = message.from_user.id
     user_name = data.get('name')
-    vpn_number = data.get('new_vpn_num')
+    vpn_number = data.get('vpn_num')
     points = 0
-    valid = False
+    valid = True
 
     await message.reply(
-        f"Cool {data['name']}! Your number is {data['new_vpn_num']}. Writing it into DB!",
+        f"Супер, {data['name']}! Твой номер: {data['vpn_num']}. Записал его к себе в базу!",
         reply_markup=ReplyKeyboardRemove(),
     )
     write_user_to_db(user_id, user_name, vpn_number, points, valid)
     await state.clear()
 
 
-@form_router.message(Form.vpn_num, F.text.casefold() == "no")
+@form_router.message(Form.vpn_num, F.text.casefold() == "нет")
 async def process_vpn_num_no(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
     await message.answer(
-        f"That's all right {data['name']}! Tell me your true number",
+        f"Ничего страшного, {data['name']}! Назови свой номер",
     )
 
 
 @form_router.message(Form.vpn_num)
 async def process_unknown_vpn_num(message: Message) -> None:
-    await message.reply("I don't understand you :(")
+    await message.reply("Я тебя не понимаю :(")
 
 
 @form_router.message(Form.name)
 async def process_unknown_name(message: Message) -> None:
-    await message.reply("Don't try to fool me!")
+    await message.reply("Не пытайся надурить меня!")
