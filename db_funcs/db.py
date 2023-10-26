@@ -8,7 +8,9 @@ def create_database():
 
     # Создание таблицы пользователей (id, имя, номер, количество поинтов и статус valid)
     cursor.execute('''CREATE TABLE IF NOT EXISTS users
-                      (user_id INTEGER PRIMARY KEY, user_name TEXT, vpn_number INT, points INT, valid BOOLEAN)''')
+                          (user_id INTEGER PRIMARY KEY, user_name TEXT, vpn_number INT, 
+                          points INT, valid BOOLEAN, on_validation INT)''')
+
     conn.commit()
 
     # Закрыть соединение
@@ -42,14 +44,14 @@ def check_valid(user_id):
     return valid_status
 
 
-def write_user_to_db(user_id, user_name, vpn_number, points, valid=False):
+def write_user_to_db(user_id, user_name, vpn_number, points, valid=False, on_validation=0):
     # Используем менеджер контекста для открытия соединения с базой данных
     with sqlite3.connect('users.db') as conn:
         cursor = conn.cursor()
 
         # Вставляем данные пользователя в таблицу users
-        cursor.execute("INSERT INTO users (user_id, user_name, vpn_number, points, valid) VALUES (?, ?, ?, ?, ?)",
-                       (user_id, user_name, vpn_number, points, valid))
+        cursor.execute("INSERT INTO users (user_id, user_name, vpn_number, points, valid, on_validation) VALUES (?, ?, ?, ?, ?, ?)",
+                       (user_id, user_name, vpn_number, points, valid, on_validation))
 
 
 def update_user_points(user_id, duration):
@@ -68,9 +70,11 @@ def update_user_points(user_id, duration):
 
         # Вычисление нового значения points (прибавляем duration)
         new_points = current_points + int(duration)
+        on_validation = int(duration)
 
         # Обновление полей points и valid в базе данных
-        cursor.execute("UPDATE users SET points=?, valid=0 WHERE user_id=?", (new_points, user_id))
+        cursor.execute("UPDATE users SET points=?, on_validation=?, valid=0 WHERE user_id=?",
+                       (new_points, on_validation, user_id))
         conn.commit()
 
         # Закрыть соединение
@@ -150,12 +154,47 @@ def set_user_valid(vpn_number):
     user = cursor.fetchone()
 
     if user:
-        # Обновляем поле valid в базе данных для данного пользователя
+        # Обновляем поля valid и on_validation в базе данных для данного пользователя
         user_id = user[0]
-        cursor.execute("UPDATE users SET valid=? WHERE user_id=?", (True, user_id))
+        cursor.execute("UPDATE users SET valid=?, on_validation=? WHERE user_id=?", (True, 0, user_id))
         conn.commit()
         conn.close()
-        return True  # Успешно установлено значение valid=True
+        return True  # Успешно установлено значение valid=True и on_validation=0
     else:
         conn.close()
         return False  # Пользователь с указанным VPN-номером и validate=False не найден
+
+
+def set_user_invalid(vpn_num_rejected):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Получаем пользователя с указанным VPN-номером
+    cursor.execute("SELECT * FROM users WHERE vpn_number=? AND valid=?",(vpn_num_rejected, False))
+    user = cursor.fetchone()
+
+    if user:
+        user_id, _, _, points, _, on_validation = user
+        new_points = points - on_validation  # вычитаем on_validation из points
+
+        # Обновляем поля points и on_validation в базе данных
+        cursor.execute("UPDATE users SET points=?, on_validation=0, valid=1 WHERE user_id=?", (new_points, user_id))
+        conn.commit()
+        conn.close()
+        return True  # Успешно установлено значение valid=False и on_validation=0
+    else:
+        conn.close()
+        return False  # Пользователь с указанным VPN-номером и validate=True не найден
+
+
+def decrease_points():
+    try:
+        conn = sqlite3.connect('users.db')
+        cursor = conn.cursor()
+
+        with conn:
+            cursor.execute("UPDATE users SET points = points - 1 WHERE points > 0")  # Избегаем отрицательных значений
+    except Exception as e:
+        print(f"Ошибка при выполнении транзакции: {e}")
+    finally:
+        conn.close()

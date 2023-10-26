@@ -34,5 +34,6 @@ def get_admin_kb() -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardBuilder()
     kb.button(text="show_users")
     kb.button(text="confirm_payment")
-    kb.adjust(2)
+    kb.button(text="reject_payment")
+    kb.adjust(3)
     return kb.as_markup(resize_keyboard=True)
