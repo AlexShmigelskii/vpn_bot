@@ -28,3 +28,11 @@ def get_command_kb() -> ReplyKeyboardMarkup:
     kb.button(text="/change_num")
     kb.adjust(3)
     return kb.as_markup(resize_keyboard=True)
+
+
+def get_admin_kb() -> ReplyKeyboardMarkup:
+    kb = ReplyKeyboardBuilder()
+    kb.button(text="show_users")
+    kb.button(text="confirm_payment")
+    kb.adjust(2)
+    return kb.as_markup(resize_keyboard=True)

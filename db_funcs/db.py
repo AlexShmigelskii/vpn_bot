@@ -110,3 +110,52 @@ def update_user_vpn_num(user_id, vpn_number):
 
     # Возвращаем успешный сигнал
     return "Номер vpn успешно обновлен."
+
+
+def get_all_users():
+    # Подключение к базе данных
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Получение всех пользователей из базы данных
+    cursor.execute("SELECT * FROM users")
+    users = cursor.fetchall()
+
+    # Закрыть соединение
+    conn.close()
+
+    return users
+
+
+def get_validate_users():
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Выбираем пользователей с validate=False
+    cursor.execute("SELECT * FROM users WHERE valid=?", (False,))
+    validate_users = cursor.fetchall()
+
+    # Закрываем соединение
+    conn.close()
+
+    return validate_users
+
+
+def set_user_valid(vpn_number):
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Проверяем наличие пользователя с указанным VPN-номером и validate=False
+    cursor.execute("SELECT * FROM users WHERE vpn_number=? AND valid=?", (vpn_number, False))
+    user = cursor.fetchone()
+
+    if user:
+        # Обновляем поле valid в базе данных для данного пользователя
+        user_id = user[0]
+        cursor.execute("UPDATE users SET valid=? WHERE user_id=?", (True, user_id))
+        conn.commit()
+        conn.close()
+        return True  # Успешно установлено значение valid=True
+    else:
+        conn.close()
+        return False  # Пользователь с указанным VPN-номером и validate=False не найден
