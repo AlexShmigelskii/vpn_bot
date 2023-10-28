@@ -7,9 +7,9 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardRemove
 
+from handlers import user_info
 from keyboards.keyboards import get_yes_no_kb
-from db_funcs.db import check_existing_user, write_user_to_db
-
+from funcs.db import check_existing_user, write_user_to_db, get_user_info
 
 form_router = Router()
 
@@ -25,9 +25,11 @@ async def command_start(message: Message, state: FSMContext) -> None:
         vpn_number = existing_user[2]  # Получаем номер из базы данных
         points = existing_user[3]  # Получаем количество поинтов из базы данных
         await message.answer(f'Привет, {user_name}! Ты уже в нашей базе данных.')
-        await message.answer(f'Твой номер: {vpn_number}. Дней до конца подписки: {points}')
-        await message.answer('Если хочешь поменять свой номер, напиши команду "/change_num"!')
-        await message.answer('Если хочешь продлить подписку, напиши команду "/get_points"!')
+        await message.answer(f'Твой номер: {vpn_number}. Дней до конца подписки: {points}'
+                             f'\nЕсли хочешь поменять свой номер, напиши команду "/change_num"'
+                             f'\nЕсли хочешь продлить подписку, напиши команду "/get_points"'
+                             f'\nЕсли хочешь посмотреть на свой профиль, напиши команду "/show_profile"')
+
 
     else:
         await state.set_state(Form.name)
@@ -81,14 +83,27 @@ async def process_vpn_num_yes(message: Message, state: FSMContext) -> None:
     user_name = data.get('name')
     vpn_number = data.get('vpn_num')
     points = 0
-    valid = True
+    need_validation = False
 
     await message.reply(
         f"Супер, {data['name']}! Твой номер: {data['vpn_num']}. Записал его к себе в базу!",
         reply_markup=ReplyKeyboardRemove(),
     )
-    write_user_to_db(user_id, user_name, vpn_number, points, valid)
+    write_user_to_db(user_id, user_name, vpn_number, points, need_validation)
     await state.clear()
+
+
+    user_info = get_user_info(user_id)
+
+    if user_info:
+        user_id, user_name, vpn_number, points, valid, on_validation, notifications = user_info
+        response = (f"Имя пользователя: {user_name}"
+                    f"\nVPN номер: {vpn_number}"
+                    f"\nДней подписки: {points}"
+                    f"\nСтатус: {'Ждет валидации' if valid else 'Можно пополнять'}"
+                    f"\nОжидающие подтверждение: {on_validation} дней"
+                    f"\nУведомления от бота {'включены' if notifications else 'выключены'}")
+        await message.answer(response)
 
 
 @form_router.message(Form.vpn_num, F.text.casefold() == "нет")

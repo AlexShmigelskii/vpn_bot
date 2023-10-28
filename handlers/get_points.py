@@ -9,7 +9,7 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from Forms.get_points_form import Form
 from keyboards.keyboards import get_yes_no_kb, get_duration_kb
 
-from db_funcs.db import check_existing_user, update_user_points, check_valid
+from funcs.db import check_existing_user, update_user_points, check_need_validation
 
 form_router = Router()
 
@@ -22,7 +22,16 @@ async def command_get_points(message: Message, state: FSMContext) -> None:
 
     if existing_user:
 
-        if check_valid(user_id):
+        if check_need_validation(user_id):
+
+            await message.answer(
+                f"Прости,я еще не успел проверить твое старое пополнение!",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            await state.clear()
+
+        else:
+
             user_name = existing_user[1]
             vpn_number = existing_user[2]  # Получаем номер из базы данных
             points = existing_user[3]  # Получаем количество поинтов из базы данных
@@ -33,13 +42,6 @@ async def command_get_points(message: Message, state: FSMContext) -> None:
                 reply_markup=get_yes_no_kb()
             )
             await state.set_state(Form.want_to_purchase)
-
-        else:
-            await message.answer(
-                f"Прости,я еще не успел проверить твое старое пополнение!",
-                reply_markup=ReplyKeyboardRemove(),
-            )
-            await state.clear()
 
     else:
         await message.answer(
@@ -108,7 +110,8 @@ async def process_duration(message: Message, state: FSMContext) -> None:
 async def process_duration_yes(message: Message, state: FSMContext) -> None:
 
     await message.reply(
-        "Хорошо. Тогда тебе нужно оплатить по {реквизитам} {сумму} и отправить скриншот в чат",
+        "Хорошо. Тогда тебе нужно оплатить по {реквизитам} {сумму} и отправить скриншот в чат "
+        "\nПринимаю только одну фотографию",
         reply_markup=ReplyKeyboardRemove(),
     )
     await state.set_state(Form.send_photo)
@@ -131,7 +134,7 @@ async def process_unknown_duration(message: Message) -> None:
 @form_router.message(Form.send_photo, F.photo)
 async def process_send_photo(message: Message, state: FSMContext) -> None:
 
-    from main import bot
+    from essentials import bot
     user_id = message.from_user.id
     user = check_existing_user(user_id)
     admin_id = 1298017336

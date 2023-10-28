@@ -1,5 +1,3 @@
-import logging
-
 from aiogram.fsm.context import FSMContext
 
 from aiogram import Router, F
@@ -9,7 +7,8 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from Forms.admin_pannel_form import Form
 from keyboards.keyboards import get_admin_kb, get_yes_no_kb
 
-from db_funcs.db import get_all_users, get_validate_users, set_user_valid, set_user_invalid
+from funcs.db import get_all_users, get_validate_users, set_user_valid, set_user_invalid
+from funcs.user_connection import send_confirmation, send_rejection
 
 from secret import ADMIN_PASSWORD
 
@@ -65,12 +64,14 @@ async def process_confirm_payment_yes(message: Message, state: FSMContext) -> No
     data = await state.get_data()
     vpn_num = data.get("vpn_num")
     db_answer = set_user_valid(vpn_num)
+    user_id = message.from_user.id
 
     if db_answer:
         await message.reply(
             f"Подтверждение прошло успешно!",
             reply_markup=get_admin_kb(),
         )
+        await send_confirmation(user_id)
 
     else:
         await message.reply(
@@ -124,12 +125,14 @@ async def process_reject_payment_yes(message: Message, state: FSMContext) -> Non
     data = await state.get_data()
     vpn_num_reject = data.get("vpn_num_reject")
     db_answer = set_user_invalid(vpn_num_reject)
+    user_id = message.from_user.id
 
     if db_answer:
         await message.reply(
             f"Пополнение отвергнуто!",
             reply_markup=get_admin_kb(),
         )
+        await send_rejection(user_id)
 
     else:
         await message.reply(

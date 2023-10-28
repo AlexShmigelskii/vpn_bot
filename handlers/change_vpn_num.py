@@ -8,7 +8,7 @@ from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardRemove
 
 from keyboards.keyboards import get_yes_no_kb
-from db_funcs.db import check_existing_user, update_user_vpn_num
+from funcs.db import check_existing_user, update_user_vpn_num
 
 
 form_router = Router()
@@ -58,7 +58,7 @@ async def cancel_handler(message: Message, state: FSMContext) -> None:
 async def process_validate_yes(message: Message, state: FSMContext) -> None:
 
     await message.reply(
-        f"Супер! Назови свой новый номер",
+        f"Супер! Назови свой настоящий номер",
         reply_markup=ReplyKeyboardRemove(),
     )
     await state.set_state(Form.new_vpn_num)
