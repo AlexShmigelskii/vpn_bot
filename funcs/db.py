@@ -49,14 +49,16 @@ def check_need_validation(user_id):
     return valid_status
 
 
-def write_user_to_db(user_id, user_name, vpn_number, points, need_validation=False, on_validation=0, subscription_notification_enabled=1):
+def write_user_to_db(user_id, user_name, vpn_number, points, need_validation=False, on_validation=0,
+                     subscription_notification_enabled=1):
     # Используем менеджер контекста для открытия соединения с базой данных
     with sqlite3.connect('users.db') as conn:
         cursor = conn.cursor()
 
         # Вставляем данные пользователя в таблицу users
-        cursor.execute("INSERT INTO users (user_id, user_name, vpn_number, points, need_validation, on_validation,subscription_notification_enabled) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                       (user_id, user_name, vpn_number, points, need_validation, on_validation, subscription_notification_enabled))
+        cursor.execute(
+            "INSERT INTO users (user_id, user_name, vpn_number, points, need_validation, on_validation,subscription_notification_enabled) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, user_name, vpn_number, points, need_validation, on_validation, subscription_notification_enabled))
 
 
 def update_user_points(user_id, duration):
@@ -158,17 +160,20 @@ def set_user_valid(vpn_number):
     # Проверяем наличие пользователя с указанным VPN-номером и need_validation=True
     cursor.execute("SELECT * FROM users WHERE vpn_number=? AND need_validation=?", (vpn_number, True))
     user = cursor.fetchone()
+    if user is None:
+        return False, None
+
+    user_id = user[0]
 
     if user:
         # Обновляем поля need_validation и on_validation в базе данных для данного пользователя
-        user_id = user[0]
         cursor.execute("UPDATE users SET need_validation=?, on_validation=? WHERE user_id=?", (False, 0, user_id))
         conn.commit()
         conn.close()
-        return True  # Успешно установлено значение need_validation=False и on_validation=0
+        return True, user_id  # Успешно установлено значение need_validation=False и on_validation=0
     else:
         conn.close()
-        return False  # Пользователь с указанным VPN-номером и need_validation=True не найден
+        return False, user_id  # Пользователь с указанным VPN-номером и need_validation=True не найден
 
 
 def set_user_invalid(vpn_num_rejected):
@@ -176,7 +181,7 @@ def set_user_invalid(vpn_num_rejected):
     cursor = conn.cursor()
 
     # Получаем пользователя с указанным VPN-номером
-    cursor.execute("SELECT * FROM users WHERE vpn_number=? AND need_validation=?",(vpn_num_rejected, True))
+    cursor.execute("SELECT * FROM users WHERE vpn_number=? AND need_validation=?", (vpn_num_rejected, True))
     user = cursor.fetchone()
 
     if user:
@@ -184,7 +189,8 @@ def set_user_invalid(vpn_num_rejected):
         new_points = points - on_validation  # вычитаем on_validation из points
 
         # Обновляем поля points и on_validation в базе данных
-        cursor.execute("UPDATE users SET points=?, on_validation=0, need_validation=0 WHERE user_id=?", (new_points, user_id))
+        cursor.execute("UPDATE users SET points=?, on_validation=0, need_validation=0 WHERE user_id=?",
+                       (new_points, user_id))
         conn.commit()
         conn.close()
         return True  # Успешно установлено значение need_validation=False и on_validation=0
@@ -225,16 +231,40 @@ def decrease_points():
         conn.close()
 
 
-async def check_subscription_expiry():
+def check_subscription_expiry():
     # Подключение к базе данных
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
 
     # Получение пользователей с points <= 3
-    cursor.execute("SELECT user_id FROM users WHERE points <= 3 AND subscription_notification_enabled = 1")
+    cursor.execute(
+        "SELECT user_id, points FROM users WHERE points > 0 AND points < 60 AND subscription_notification_enabled = 1")
     users_to_notify = cursor.fetchall()
 
     # Закрыть соединение
     conn.close()
 
     return users_to_notify
+
+
+def toggle_subscription_notification(user_id):
+    # Подключение к базе данных
+    conn = sqlite3.connect('users.db')
+    cursor = conn.cursor()
+
+    # Получение текущего значения поля subscription_notification_enabled
+    cursor.execute("SELECT subscription_notification_enabled FROM users WHERE user_id=?", (user_id,))
+    current_value = cursor.fetchone()[0]
+
+    # Инвертирование значения (True становится False, False становится True)
+    new_value = not current_value
+
+    # Обновление поля subscription_notification_enabled в базе данных
+    cursor.execute("UPDATE users SET subscription_notification_enabled=? WHERE user_id=?", (new_value, user_id))
+    # Применение изменений
+    conn.commit()
+
+    # Закрыть соединение
+    conn.close()
+
+    return new_value

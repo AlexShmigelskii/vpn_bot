@@ -63,8 +63,7 @@ async def process_confirm_payment_yes(message: Message, state: FSMContext) -> No
 
     data = await state.get_data()
     vpn_num = data.get("vpn_num")
-    db_answer = set_user_valid(vpn_num)
-    user_id = message.from_user.id
+    db_answer, user_id = set_user_valid(vpn_num)
 
     if db_answer:
         await message.reply(
@@ -124,8 +123,7 @@ async def process_reject_payment_yes(message: Message, state: FSMContext) -> Non
 
     data = await state.get_data()
     vpn_num_reject = data.get("vpn_num_reject")
-    db_answer = set_user_invalid(vpn_num_reject)
-    user_id = message.from_user.id
+    db_answer, user_id = set_user_invalid(vpn_num_reject)
 
     if db_answer:
         await message.reply(

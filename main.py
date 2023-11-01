@@ -7,8 +7,8 @@ import sys
 import secret
 from essentials import dp, bot
 from funcs.db import create_database
-from handlers import add_vpn_num, get_points, different_types, change_vpn_num, admin_pannel, user_info
-from funcs.schedules import run_schedule
+from handlers import add_vpn_num, get_points, different_types, change_vpn_num, admin_pannel, user_info, bot_notifications
+from funcs.schedules import run_schedule  # Импортируем асинхронную функцию запуска планировщика
 
 
 # Запуск бота
@@ -19,16 +19,18 @@ async def main():
         change_vpn_num.form_router,
         admin_pannel.form_router,
         user_info.form_router,
+        bot_notifications.form_router,
         different_types.router)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
+# Создаем цикл событий asyncio
+async def run():
+    await asyncio.gather(main(), run_schedule())  # Запускаем бота и планировщик задач
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     create_database()
-    loop = asyncio.get_event_loop()
-    loop.create_task(run_schedule())  # Создаем задачу для цикла асинхронного выполнения
-    loop.create_task(main())  # Создаем задачу для функции main()
-    loop.run_forever()  # Запускаем цикл асинхронного выполнения
+    asyncio.run(run())  # Запускаем обе задачи в цикле событий asyncio

@@ -7,7 +7,6 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, ReplyKeyboardRemove
 
-from handlers import user_info
 from keyboards.keyboards import get_yes_no_kb
 from funcs.db import check_existing_user, write_user_to_db, get_user_info
 
@@ -34,7 +33,7 @@ async def command_start(message: Message, state: FSMContext) -> None:
     else:
         await state.set_state(Form.name)
         await message.answer(
-            "Привет! Как я могу к тебе обращаться?",
+            "Привет! Как тебя зовут?",
             reply_markup=ReplyKeyboardRemove(),
         )
 
@@ -91,7 +90,6 @@ async def process_vpn_num_yes(message: Message, state: FSMContext) -> None:
     )
     write_user_to_db(user_id, user_name, vpn_number, points, need_validation)
     await state.clear()
-
 
     user_info = get_user_info(user_id)
 

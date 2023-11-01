@@ -149,7 +149,7 @@ async def process_send_photo(message: Message, state: FSMContext) -> None:
 
     if db_response:
         await message.reply(
-            f"Фотографию получил. Подписка продлена на {duration} дней!",
+            f"Фотографию получил. Подписка будет продлена на {duration} дней после проверки!",
             reply_markup=ReplyKeyboardRemove(),
         )
     else:
