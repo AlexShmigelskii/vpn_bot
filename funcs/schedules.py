@@ -1,4 +1,3 @@
-import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from essentials import bot
 from funcs.db import check_subscription_expiry, decrease_points
@@ -20,10 +19,10 @@ async def send_expire_notification():
 
 async def run_schedule():
     # Планируем выполнение decrease_points каждую минуту
-    scheduler.add_job(decrease_points, 'interval', minutes=1)
+    scheduler.add_job(decrease_points, 'cron', hour=4, minute=0)
 
     # Планируем выполнение send_expire_notification каждую минуту
-    scheduler.add_job(send_expire_notification, 'interval', minutes=1)
+    scheduler.add_job(send_expire_notification, 'cron', hour=12, minute=0)
 
     # Запускаем планировщик
     scheduler.start()

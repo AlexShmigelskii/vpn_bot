@@ -238,7 +238,7 @@ def check_subscription_expiry():
 
     # Получение пользователей с points <= 3
     cursor.execute(
-        "SELECT user_id, points FROM users WHERE points > 0 AND points < 60 AND subscription_notification_enabled = 1")
+        "SELECT user_id, points FROM users WHERE points > 0 AND points < 4 AND subscription_notification_enabled = 1")
     users_to_notify = cursor.fetchall()
 
     # Закрыть соединение
@@ -252,19 +252,28 @@ def toggle_subscription_notification(user_id):
     conn = sqlite3.connect('users.db')
     cursor = conn.cursor()
 
-    # Получение текущего значения поля subscription_notification_enabled
-    cursor.execute("SELECT subscription_notification_enabled FROM users WHERE user_id=?", (user_id,))
-    current_value = cursor.fetchone()[0]
+    # Проверка наличия пользователя в базе данных
+    cursor.execute("SELECT 1 FROM users WHERE user_id=?", (user_id,))
+    user_exists = cursor.fetchone()
 
-    # Инвертирование значения (True становится False, False становится True)
-    new_value = not current_value
+    if user_exists:
+        # Получение текущего значения поля subscription_notification_enabled
+        cursor.execute("SELECT subscription_notification_enabled FROM users WHERE user_id=?", (user_id,))
+        current_value = cursor.fetchone()[0]
 
-    # Обновление поля subscription_notification_enabled в базе данных
-    cursor.execute("UPDATE users SET subscription_notification_enabled=? WHERE user_id=?", (new_value, user_id))
-    # Применение изменений
-    conn.commit()
+        # Инвертирование значения (True становится False, False становится True)
+        new_value = not current_value
 
-    # Закрыть соединение
-    conn.close()
+        # Обновление поля subscription_notification_enabled в базе данных
+        cursor.execute("UPDATE users SET subscription_notification_enabled=? WHERE user_id=?", (new_value, user_id))
+        # Применение изменений
+        conn.commit()
 
-    return new_value
+        # Закрыть соединение
+        conn.close()
+
+        return new_value
+    else:
+        # Если пользователя нет в базе данных, возвращаем False или None, чтобы указать об этом
+        conn.close()
+        return False
