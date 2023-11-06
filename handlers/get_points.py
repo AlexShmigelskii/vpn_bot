@@ -10,6 +10,7 @@ from Forms.get_points_form import Form
 from keyboards.keyboards import get_yes_no_kb, get_duration_kb
 
 from funcs.db import check_existing_user, update_user_points, check_need_validation
+from secret import CARD_NUM
 
 form_router = Router()
 
@@ -94,7 +95,7 @@ async def process_unknown_want_to_purchase(message: Message) -> None:
     await message.reply("Я не понимаю тебя :(")
 
 
-@form_router.message(Form.select_duration, F.text.in_({'30', '60', '90'}))
+@form_router.message(Form.select_duration, F.text.in_({'30', '60'}))
 async def process_duration(message: Message, state: FSMContext) -> None:
 
     days = message.text
@@ -109,10 +110,18 @@ async def process_duration(message: Message, state: FSMContext) -> None:
 @form_router.message(Form.select_duration, F.text.casefold() == "да")
 async def process_duration_yes(message: Message, state: FSMContext) -> None:
 
+    data = await state.get_data()
+    duration = data.get("duration")
+
     await message.reply(
-        "Хорошо. Тогда тебе нужно оплатить по {реквизитам} {сумму} и отправить скриншот в чат "
-        "\nПринимаю только одну фотографию",
+        f"Хорошо. Вот мои реквизиты"
+        f"\nНомер карты: {CARD_NUM} - Александр Ш."
+        f"\nСумма: {int(duration) / 30 * 50}р",
         reply_markup=ReplyKeyboardRemove(),
+    )
+    await message.answer(
+        "После оплаты пришли скриншот в чат"
+        "\nПринимаю только одну фотографию"
     )
     await state.set_state(Form.send_photo)
 

@@ -15,9 +15,8 @@ def get_duration_kb() -> ReplyKeyboardMarkup:
     kb = ReplyKeyboardBuilder()
     kb.button(text="30")
     kb.button(text="60")
-    kb.button(text="90")
     kb.button(text="cancel")
-    kb.adjust(3)
+    kb.adjust(2)
     return kb.as_markup(resize_keyboard=True)
 
 
